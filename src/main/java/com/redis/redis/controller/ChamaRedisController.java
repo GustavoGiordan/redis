@@ -7,6 +7,7 @@ import java.util.Set;
 import com.redis.redis.config.RedisConfig;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,8 +25,9 @@ public class ChamaRedisController {
 
 		ArrayList<String> keysList = new ArrayList<>();
 		try{
-			Set<String> keys = jedis.keys("*");
 
+			Set<String> keys = jedis.keys("*");
+			
 			Iterator<String> it = keys.iterator();
 
 			while (it.hasNext()) {
@@ -33,6 +35,29 @@ public class ChamaRedisController {
 				String valor = jedis.get(chave);
 				System.out.println("Chave: " + chave + " Valor: " + valor);
 				keysList.add(chave +":"+ valor);
+			}
+		} finally{
+			jedis.close();
+		}
+
+		return keysList;
+	}
+
+	@GetMapping("/buscaChaves/{chave}")
+	public ArrayList<String> listarClientesPorChave(@PathVariable("chave") String chave){
+
+		ArrayList<String> keysList = new ArrayList<>();
+		try{
+
+			Set<String> keys = jedis.keys("*" + chave + "*");
+			
+			Iterator<String> it = keys.iterator();
+
+			while (it.hasNext()) {
+				String chaveRecebida = it.next();
+				String valor = jedis.get(chaveRecebida);
+				System.out.println("Chave: " + chaveRecebida + " Valor: " + valor);
+				keysList.add(chaveRecebida +":"+ valor);
 			}
 		} finally{
 			jedis.close();
