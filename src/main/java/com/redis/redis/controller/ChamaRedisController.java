@@ -1,69 +1,69 @@
 package com.redis.redis.controller;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
+import java.util.UUID;
 
-import com.redis.redis.config.RedisConfig;
+import com.redis.redis.model.ObjetoRedis;
+import com.redis.redis.model.ResponseRedis;
+import com.redis.redis.repository.ObjetoRepository;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPooled;
+import static org.springframework.data.domain.ExampleMatcher.GenericPropertyMatchers.contains;
 
 @RestController
 @RequestMapping(value="/redis")
 public class ChamaRedisController {
 
-	private Jedis jedis = RedisConfig.getRedis();
+	@Autowired
+	private final ObjetoRepository objetoRepository;
 
-    @GetMapping("/buscaChaves")
-	public ArrayList<String> listarClientes(){
-
-		ArrayList<String> keysList = new ArrayList<>();
-		try{
-
-			Set<String> keys = jedis.keys("*");
-			
-			Iterator<String> it = keys.iterator();
-
-			while (it.hasNext()) {
-				String chave = it.next();
-				String valor = jedis.get(chave);
-				System.out.println("Chave: " + chave + " Valor: " + valor);
-				keysList.add(chave +":"+ valor);
-			}
-		} finally{
-			jedis.close();
-		}
-
-		return keysList;
+	public ChamaRedisController(ObjetoRepository objetoRepository) {
+		this.objetoRepository = objetoRepository;
 	}
 
 	@GetMapping("/buscaChaves/{chave}")
-	public ArrayList<String> listarClientesPorChave(@PathVariable("chave") String chave){
+	public List<List<ResponseRedis>> listarClientes(@PathVariable("chave") String chave){
 
-		ArrayList<String> keysList = new ArrayList<>();
-		try{
 
-			Set<String> keys = jedis.keys("*" + chave + "*");
-			
-			Iterator<String> it = keys.iterator();
+		ExampleMatcher matcher = ExampleMatcher.matching()
+				.withMatcher(chave, contains());
 
-			while (it.hasNext()) {
-				String chaveRecebida = it.next();
-				String valor = jedis.get(chaveRecebida);
-				System.out.println("Chave: " + chaveRecebida + " Valor: " + valor);
-				keysList.add(chaveRecebida +":"+ valor);
-			}
-		} finally{
-			jedis.close();
-		}
+		ObjetoRedis objetoRedis = new ObjetoRedis();
 
-		return keysList;
+		Example<ObjetoRedis> example = Example.of(objetoRedis, matcher);
+		objetoRepository.findAll(example);
+
+		Iterable<ObjetoRedis> it = objetoRepository.findAll(example);
+		List<List<ResponseRedis>> response = new ArrayList<>();
+
+		it.forEach(item -> {
+			response.add(item.getResponses());
+		});
+
+		return response;
+	
 	}
-    
+
+	@GetMapping("/salvaChaves/{chave}")
+	public ObjetoRedis listarClientesPorChave(@PathVariable("chave") String chave){
+		ResponseRedis response = new ResponseRedis();
+		response.setId(chave);
+		response.setNome(chave + "nome");
+		response.setIdade(10);
+
+		List<ResponseRedis> responses = new ArrayList<>();
+		responses.add(response);
+
+		ObjetoRedis objRedis =  new ObjetoRedis(UUID.randomUUID().toString(),responses);
+
+		return objetoRepository.save(objRedis);
+	}
 }
