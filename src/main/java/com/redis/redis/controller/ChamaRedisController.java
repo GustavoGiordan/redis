@@ -1,8 +1,7 @@
 package com.redis.redis.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Stream;
 
 import com.redis.redis.model.ObjetoRedis;
 import com.redis.redis.model.ResponseRedis;
@@ -16,8 +15,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static org.springframework.data.domain.ExampleMatcher.GenericPropertyMatchers.contains;
-
 @RestController
 @RequestMapping(value="/redis")
 public class ChamaRedisController {
@@ -30,30 +27,37 @@ public class ChamaRedisController {
 	}
 
 	@GetMapping("/buscaChaves/{chave}")
-	public List<List<ResponseRedis>> listarClientes(@PathVariable("chave") String chave){
+	public List<ObjetoRedis> listarClientes(@PathVariable("chave") String chave){
 
 
-		ExampleMatcher matcher = ExampleMatcher.matching()
-				.withMatcher(chave, contains());
+		ObjetoRedis objetoRedis = montaResponse(chave);
 
-		ObjetoRedis objetoRedis = new ObjetoRedis();
+		Example<ObjetoRedis> customExampleMatcher = Example.of(objetoRedis,
+				ExampleMatcher.matchingAll());
 
-		Example<ObjetoRedis> example = Example.of(objetoRedis, matcher);
-		objetoRepository.findAll(example);
-
-		Iterable<ObjetoRedis> it = objetoRepository.findAll(example);
-		List<List<ResponseRedis>> response = new ArrayList<>();
-
-		it.forEach(item -> {
-			response.add(item.getResponses());
+		List<ObjetoRedis> response = new ArrayList<>();
+		objetoRepository.findAll().forEach(item -> {
+			if(item.getId().contains(chave)){
+				response.add(item);
+			}
 		});
 
-		return response;
-	
+		List<ObjetoRedis> response2 = new ArrayList<>();
+		response
+				.stream()
+				.sorted((object1, object2) -> object1.getId().compareTo(object2.getId())).forEach(response2::add);
+
+		return response2;
+
 	}
 
 	@GetMapping("/salvaChaves/{chave}")
 	public ObjetoRedis listarClientesPorChave(@PathVariable("chave") String chave){
+
+		return objetoRepository.save(montaResponse(chave));
+	}
+
+	private ObjetoRedis montaResponse(String chave){
 		ResponseRedis response = new ResponseRedis();
 		response.setId(chave);
 		response.setNome(chave + "nome");
@@ -62,8 +66,8 @@ public class ChamaRedisController {
 		List<ResponseRedis> responses = new ArrayList<>();
 		responses.add(response);
 
-		ObjetoRedis objRedis =  new ObjetoRedis(UUID.randomUUID().toString(),responses);
+		ObjetoRedis objRedis =  new ObjetoRedis(chave, responses);
 
-		return objetoRepository.save(objRedis);
+		return objRedis;
 	}
 }

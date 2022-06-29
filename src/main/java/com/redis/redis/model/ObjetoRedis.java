@@ -24,6 +24,7 @@ public class ObjetoRedis{
     @Id
     String id;
 
-    private List<ResponseRedis> responses;
-    
+   private List<ResponseRedis> responses;
+
+
 }
